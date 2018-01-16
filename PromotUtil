@@ -1,0 +1,27 @@
+public class PromotUtil{
+   public static boolean confirmPrompt(String prompt) throws IOException {
+        while(true) {
+            System.err.print(prompt + " (Y or N) ");
+            StringBuilder responseBuilder = new StringBuilder();
+
+            while(true) {
+                int c = System.in.read();
+                if (c == -1 || c == 13 || c == 10) {
+                    String response = responseBuilder.toString();
+                    if (!response.equalsIgnoreCase("y") && !response.equalsIgnoreCase("yes")) {
+                        if (!response.equalsIgnoreCase("n") && !response.equalsIgnoreCase("no")) {
+                            System.err.println("Invalid input: " + response);
+                            break;
+                        }
+
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                responseBuilder.append((char)c);
+            }
+        }
+    }
+}
