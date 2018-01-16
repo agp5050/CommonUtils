@@ -6,6 +6,7 @@ public class PromotUtil{
 
             while(true) {
                 int c = System.in.read();
+                // 13代表回车键,10代表换行键，－1代表?
                 if (c == -1 || c == 13 || c == 10) {
                     String response = responseBuilder.toString();
                     if (!response.equalsIgnoreCase("y") && !response.equalsIgnoreCase("yes")) {
