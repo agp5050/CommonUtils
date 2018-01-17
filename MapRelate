@@ -1,0 +1,33 @@
+  
+  /**
+  *如果找到e匹配key＝＝e.key跳出循环返回e，找不到null
+  */
+  private[this] def findEntry0(key: A, h: Int): Entry = {
+    var e = table(h).asInstanceOf[Entry]
+    while (e != null && !elemEquals(e.key, key)) e = e.next
+    e
+  }
+  
+  /**
+  *从旧的table中倒序取e，如果新的table中e已经存在，则放到新e的next指针
+  *新e放到table(H)上面。遍历旧的e.next挨个循环执行上面操作。
+  */
+private def resize(newSize: Int) {
+    val oldTable = table
+    table = new Array(newSize)
+    nnSizeMapReset(table.length)
+    var i = oldTable.length - 1
+    while (i >= 0) {
+      var e = oldTable(i)
+      while (e != null) {
+        val h = index(elemHashCode(e.key))
+        val e1 = e.next
+        e.next = table(h).asInstanceOf[Entry]
+        table(h) = e
+        e = e1
+        nnSizeMapAdd(h)
+      }
+      i = i - 1
+    }
+    threshold = newThreshold(_loadFactor, newSize)
+  }
