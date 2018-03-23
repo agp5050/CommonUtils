@@ -1,0 +1,61 @@
+
+
+object Plalindrome {
+  val hwrst=new scala.collection.mutable.ArrayBuffer[String]()
+  def accMaxPos(index:Int,len: Int):(Int,Int)={
+    val isOddlen=(len-1-index+1)%2==1 //index到末尾的元素个数是否为奇偶
+    val pos=(len-1-index)/2
+    if(isOddlen){
+      return (pos,pos)
+    }else{
+      return (pos,pos+1)
+    }
+
+  }
+  def appendPartplalindrome(index:Int,str:String){
+    //get from index to end the biggest pos
+    val len=str.length
+    val ( lmaxpos , rmaxpos )=accMaxPos(index,len)
+    val maxlenisOdd=lmaxpos==rmaxpos
+    //index fixed but pos moves from 0 to lmaxpos indices the new middle point relative length to index.
+    for(i <- 0 until lmaxpos){
+      if(i==0){
+        if(str(index)==str(index+1)){
+          hwrst.append(str.substring(index,index+1+1)) // 需要再加1才可以
+        }
+
+      }else if(i==lmaxpos && !maxlenisOdd && lmaxpos>0){
+        if(str.substring(index,index+lmaxpos+1) == str.substring(rmaxpos).reverse){
+          hwrst.append(str.substring(index))
+        }
+      }else{
+        if(str.substring(index,index+i) == str.substring(index+i+1,index+2*i+1).reverse){
+          hwrst.append(str.substring(index,index+2*i+1))
+        }
+      }
+    }
+
+
+
+  }
+
+  def getAllplalindrome(str:String){
+
+    // pre check str.len if >1
+    val len=str.length
+    if(len < 2) return
+    //index 最大只能偏移到倒数第二个位置
+    for(index <- 0 until len-1){
+      appendPartplalindrome(index,str)
+    }
+
+    hwrst.map(println)
+
+  }
+
+
+  def main(args: Array[String]): Unit = {
+   val str1="caabaacddaweqweradfadqwerqwerqweradfqwerqwerqweradfqfdarewqrewqrewqfewrrqwerwerdfasdqweeasdqwerqwerqweadsfqewrqwerqwefadfqer"
+    getAllplalindrome(str1)
+}
+}
