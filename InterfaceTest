@@ -1,0 +1,177 @@
+package util;
+
+import com.alibaba.fastjson.JSON;
+import com.jikexueyuan.demo.springmvc.lesson6.entity.AzkabanParam;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+
+
+import org.apache.http.*;
+import org.apache.http.client.CookieStore;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Date;
+
+import org.springframework.web.client.RestTemplate;
+
+/**
+ * @Author Mr.An
+ * @Date 18/5/9 下午7:01
+ */
+public class TestAzkabanController {
+    private String loginurl="http://localhost:8080/login.do";
+    private String saveurl="http://localhost:8080/azkb/param/save.do?";
+    private String editurl="http://localhost:8080/azkb/param/edit.do?";
+    private String geturl="http://localhost:8080/azkb/param/get.do?";
+    private String delurl="http://localhost:8080/azkb/param/del.do?";
+
+    private String Az_Insert_Url="http://localhost:8080/azkb/param/save.do";
+    java.util.List<NameValuePair> parmlist=new ArrayList<>();
+    static CookieStore cookieStore = null;
+    private RestTemplate restTemplate;
+    //HttpClient style login
+    @Before
+    public void testLogin() throws URISyntaxException, IOException {
+
+        HttpClient httpClient = new DefaultHttpClient();
+        HttpGet httpGet = new HttpGet();
+        parmlist.add(new NameValuePair() {
+            @Override
+            public String getName() {
+                return "userName";
+            }
+
+            @Override
+            public String getValue() {
+                return "yuxiao21";
+            }
+        });
+        parmlist.add(new BasicNameValuePair("pswd",""));
+        URIBuilder uriBuilder = new URIBuilder(loginurl);
+        for (NameValuePair nameValuePair : parmlist) {
+            uriBuilder.addParameter(nameValuePair.getName(), nameValuePair.getValue());
+        }
+        httpGet.setURI(uriBuilder.build());
+        HttpResponse execute = httpClient.execute(httpGet);
+        Header[] allHeaders = execute.getAllHeaders();
+        for (Header h:allHeaders){
+            System.out.println(h.getName()+":::"+h.getValue());
+        }
+        setCookieStore(execute);
+        HttpEntity entity = execute.getEntity();
+        if (entity != null) {
+            String rst = EntityUtils.toString(entity, "utf-8");
+        System.out.println(rst);
+
+
+
+    }
+
+
+}
+
+
+
+
+    private void setCookieStore(HttpResponse response) {
+        Header firstHeader = response.getFirstHeader("Set-Cookie");
+        String cookie=firstHeader.getValue().split(";",1)[0];
+        String sessionName=cookie.split("=")[0];
+        String sessionV=cookie.split("=")[1];
+        cookieStore=new BasicCookieStore();
+        BasicClientCookie basicClientCookie = new BasicClientCookie(sessionName, sessionV);
+        basicClientCookie.setDomain("127.0.0.1");
+        basicClientCookie.setVersion(0);
+        basicClientCookie.setPath("/");
+        cookieStore.addCookie(basicClientCookie);
+
+
+    }
+
+
+    // restTemplate style login
+    @Test
+    public void loginTest() {
+        String loginUrl = "http://10.10.48.162:8085/login.do?userName={userName}&pswd={pswd}";
+        restTemplate = new RestTemplate();
+        String userName = "yuxiao21";
+        String pswd = "";
+        String result = restTemplate.getForObject(loginUrl, String.class, userName, pswd);
+
+        System.out.println(result);
+    }
+
+    //DONE
+    @Test
+    public void saveTest(){
+        restTemplate = new RestTemplate();
+        AzkabanParam azkabanParam=new AzkabanParam();
+        azkabanParam.setUpdatetime(new Date());
+        azkabanParam.setId(26);
+        azkabanParam.setName("az_from_interface");
+        azkabanParam.setValue("select * from test");
+        org.springframework.http.HttpHeaders httpHeaders=new org.springframework.http.HttpHeaders();
+        httpHeaders.set("Cookie","JSESSIONID=841A60AA6393A87FC8347DF85CA0DB23");
+        org.springframework.http.HttpEntity<AzkabanParam> entity=new org.springframework.http.HttpEntity<AzkabanParam>(azkabanParam,httpHeaders);
+        String rst = restTemplate.postForObject(saveurl, entity, String.class);
+        System.out.println(rst);
+
+    }
+    //TODO
+    @Test
+    public void saveTestApache() throws IOException {
+        CloseableHttpClient httpClient = HttpClients.custom().setDefaultCookieStore(cookieStore).build();
+        HttpPost httpPost = new HttpPost(saveurl);
+        AzkabanParam azkabanParam=new AzkabanParam();
+        azkabanParam.setUpdatetime(new Date());
+        azkabanParam.setId(27);
+        azkabanParam.setName("az_from_interface");
+        azkabanParam.setValue("select * from test");
+        String jsonStr = (String) JSON.toJSON(azkabanParam);
+        StringEntity stringEntity = new StringEntity(jsonStr, Charset.forName("utf-8"));
+        httpPost.setEntity(stringEntity);
+        CloseableHttpResponse response = httpClient.execute(httpPost);
+        HttpEntity entity = response.getEntity();
+        String stringRst = EntityUtils.toString(entity);
+        System.out.println(stringRst);
+
+
+    }
+
+    //TODO
+    public void editTest(){
+        restTemplate = new RestTemplate();
+    }
+    //TODO
+    public void getTest(){
+        restTemplate = new RestTemplate();
+    }
+
+    //TODO
+    public void delTest(){
+        restTemplate = new RestTemplate();
+
+    }
+
+
+
+
+
+}
