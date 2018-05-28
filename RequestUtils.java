@@ -235,3 +235,5 @@ public class RequestUtils {
     }
 
 }
+//aa
+                throw new MessageServiceException("短信接口访问异常,返回code:" + resultCode);
