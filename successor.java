@@ -26,3 +26,32 @@
     *整体的涵义是，先查右下侧微微大，如果没有微微大，则查左上父节点作为微微大，或者右右右父节点，这时候这个最右边的会查父类节点如果父类为null。则遍历完毕。
     *这个方法遍历所有的比first节点大的值，从小到大排序。
     */
+
+//getHigherEntry--> 比较key， 如果参数key和root比较，小的话 直接查root的左左左节点，知道最左的那个。如果key还是小于最左的，那就以最左作为这个submap中
+//的最小起点。
+//如果key比root大，依序查看右右右节点如果没有右节点，说明最大的还不如参数key大。则循环回跳，再查看父节点，最后父节点为null，或者右父节点作为返回值。
+    final Entry<K,V> getHigherEntry(K key) {
+        Entry<K,V> p = root;
+        while (p != null) {
+            int cmp = compare(key, p.key);
+            if (cmp < 0) {
+                if (p.left != null)
+                    p = p.left;
+                else
+                    return p;
+            } else {
+                if (p.right != null) {
+                    p = p.right;
+                } else {
+                    Entry<K,V> parent = p.parent;
+                    Entry<K,V> ch = p;
+                    while (parent != null && ch == parent.right) {
+                        ch = parent;
+                        parent = parent.parent;
+                    }
+                    return parent;
+                }
+            }
+        }
+        return null;
+    }
