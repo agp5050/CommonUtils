@@ -55,3 +55,20 @@
         }
         return null;
     }
+
+
+
+
+    /**
+     * Returns the first Entry in the TreeMap (according to the TreeMap's
+     * key-sort function).  Returns null if the TreeMap is empty.
+     *获取最初值firstkey。 从treemap中获取最小的key。 以后的key根据successor(key)就可以
+     *顺序的获取依次增大的序列了。 
+     */
+    final Entry<K,V> getFirstEntry() {
+        Entry<K,V> p = root;
+        if (p != null)
+            while (p.left != null)
+                p = p.left;
+        return p;
+    }
