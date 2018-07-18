@@ -1,6 +1,16 @@
 
 Entry<K,V> extends HashMap.Node<K,V>
 Entry<K,V> before, after
+TreeNode<K,V> extends LinkedHashMap.Entry<K,V> //TreeNode 继承before，after指针后又增加了parent,left,right,prev等指针。并标注为red,black红黑树。
+/**
+*static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+        TreeNode<K,V> parent;  // red-black tree links
+        TreeNode<K,V> left;
+        TreeNode<K,V> right;
+        TreeNode<K,V> prev;    // needed to unlink next upon deletion
+        boolean red;
+*
+*/
 //LinkedHashMap 的基本单元Entry结构继承了HashMap的Node基本结构并增加了before，after这两个指针。所有的元素都双向链表链接起来了。
 //Override get()
 public V get(Object key) {
