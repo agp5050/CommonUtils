@@ -59,3 +59,9 @@ public V get(Object key) {
             ++modCount;
         }
     }
+
+/**
+*LinkedList自带访问频率列表。tail方向的频率最高，head方向的频率低。这样可以用来做为一个cache，
+*将“最近最少使用”的节点移除removeEldestEntry()可以写一个子类重写这个方法，将最不频繁访问的几个元素移除cache。
+*
+*/
