@@ -14,7 +14,7 @@
         if (c==null)
             return binarySearch((List<? extends Comparable<? super T>>) list, key);
 
-        if (list instanceof RandomAccess || list.size()<BINARYSEARCH_THRESHOLD)//根据有没有整数索引分成两种查询
+        if (list instanceof RandomAccess || list.size()<BINARYSEARCH_THRESHOLD)//根据有没有整数索引或者list小于5000分成两种查询
             return Collections.indexedBinarySearch(list, key, c);  
         else
             return Collections.iteratorBinarySearch(list, key, c); 
