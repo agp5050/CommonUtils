@@ -58,3 +58,23 @@
         }
         return -(low + 1);  // key not found
     }
+
+
+    public static void reverse(List<?> list) {
+        int size = list.size();
+        if (size < REVERSE_THRESHOLD || list instanceof RandomAccess) {//根据是不是小于18或者是不是有整数索引分成两种reverse方式。
+            for (int i=0, mid=size>>1, j=size-1; i<mid; i++, j--)
+                swap(list, i, j);
+        } else {
+            // instead of using a raw type here, it's possible to capture
+            // the wildcard but it will require a call to a supplementary
+            // private method
+            ListIterator fwd = list.listIterator();
+            ListIterator rev = list.listIterator(size);
+            for (int i=0, mid=list.size()>>1; i<mid; i++) {
+                Object tmp = fwd.next();
+                fwd.set(rev.previous());
+                rev.set(tmp);
+            }
+        }
+    }
