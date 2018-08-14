@@ -87,4 +87,21 @@ public class PropertiesUtil {
         }
         return props.getProperty(key);
     }
+        public static Properties readPropertiesFile(String file) {
+        InputStream in = PropertiesUtil.class.getResourceAsStream(file);
+        Properties prop = new Properties();
+        try {
+            prop.load(in);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+        } finally {
+            try {
+                if (in != null)
+                    in.close();
+            } catch (IOException e) {
+                log.error(e.getMessage(), e);
+            }
+        }
+        return prop;
+    }
 }
