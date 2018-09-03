@@ -1,45 +1,52 @@
-package com.fbank.ai.utils;
-import com.google.common.primitives.Chars;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class Randoms<T> {
+public class Randoms {
     /**
      * 翻译python numpy.random.choice(start,end,num,replace=False)
      */
-    public static List<Integer> choice(int start,int end,boolean replaceable,int num) throws Exception {
-        List<Integer> list;
+    public static List<Integer> choice(int start,int end,boolean replaceable,int num,List<Double> weights) throws Exception {
+        List<Integer> list=new ArrayList<>();
         int volume=end-start+1;
         if (volume<1|| num<1){
             throw new Exception(String.format("%d is smaller than %d ! Or %d is smaller than 1",end,start,num));
         }
-        if (replaceable){
-            list=new ArrayList<>();
-            for (int i=0;i<num;i++){
-                int rst=(int)(Math.random()*volume)+start;
-                if (rst==end && rst!=start){
-                    rst=rst-1;//左闭右开
+
+        if (weights==null){
+            if (replaceable){
+                for (int i=0;i<num;i++){
+                    int rst=(int)(Math.random()*volume)+start;
+                    if (rst==end && rst!=start){
+                        rst=rst-1;//左闭右开
+                    }
+                    list.add(rst);
                 }
-               list.add(rst);
-            }
-            return list;
-        }else {
-            if (volume<num){
-                throw new Exception(String.format("numbers in range(%d,%d) is less than num:%d ! ",start,end,num));
-            }
-            Set<Integer> set=new HashSet<>();
-            while (set.size()<num){
-                int rst=(int)(Math.random()*volume)+start;
-                if (rst==end && rst!=start){
-                    rst=rst-1;//左闭右开
+                return list;
+            }else {
+                if (volume<num){
+                    throw new Exception(String.format("numbers in range(%d,%d) is less than num:%d ! ",start,end,num));
                 }
-                set.add(rst);
+                Set<Integer> set=new HashSet<>();
+                while (set.size()<num){
+                    int rst=(int)(Math.random()*volume)+start;
+                    if (rst==end && rst!=start){
+                        rst=rst-1;//左闭右开
+                    }
+                    set.add(rst);
+                }
+                list.addAll(set);
+                return list;
             }
-            list=new ArrayList<>();
-            list.addAll(set);
-            return list;
         }
+        List<Integer> listTmp=new ArrayList<>();
+        for (int i=start;i<end;i++){
+            listTmp.add(i);
+        }
+
+        list.addAll(choice(listTmp,num,replaceable,weights));
+
+        return list;
 
 
     }
@@ -76,6 +83,9 @@ public class Randoms<T> {
             throw new Exception("sum of weights  must be equal to 1.0 ");
         }
 
+        validNumInCollection(collection,num);
+
+
         //remove weight=0 from weights list; and same time remove the  weight relative value on collection position.
         List<T> list=new ArrayList<>();
         list.addAll(collection);
@@ -109,6 +119,7 @@ public class Randoms<T> {
             }
         }else{
             collectionRst=new HashSet<>();//不可重复选项时，高概率的出现次数被拉低了，低概率的被拉高
+            validNumInCollection(list,num);
             while (collectionRst.size()<num){
                 double randomV= Math.random();
                 int index=0;
@@ -125,10 +136,18 @@ public class Randoms<T> {
         return collectionRst;
     }
 
+    private static <T> void validNumInCollection(Collection<T> collection, int num) throws Exception {
+        Set<T> set=new HashSet<>(collection);
+        if (set.size()<num){
+            throw new Exception(String.format("collection has not enough distinct elements than num:%d ",num));
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-//        List<Integer> list=Randoms.choice(1,10,false,5);
-//        System.out.println(list);
         Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
+        List<Integer> list=Randoms.choice(1,6,false,2,Arrays.asList(doubles));
+        System.out.println(list);
+       /* Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
         Arrays.asList(doubles);
 
         for (int count=0;count<20;count++){
@@ -154,7 +173,7 @@ public class Randoms<T> {
 
             }
             System.out.println(String.format("A:%d\t B:%d\t C:%d\t D:%d\tE:%d",a,b,c,d,e));
-        }
+        }*/
     }
 
 }
