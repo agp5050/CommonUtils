@@ -1,3 +1,4 @@
+
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -13,7 +14,7 @@ public class Randoms {
             throw new Exception(String.format("%d is smaller than %d ! Or %d is smaller than 1",end,start,num));
         }
 
-        if (weights==null){
+        if (weights==null || weights.isEmpty()){
             if (replaceable){
                 for (int i=0;i<num;i++){
                     int rst=(int)(Math.random()*volume)+start;
@@ -143,9 +144,45 @@ public class Randoms {
         }
     }
 
+    /**
+     *
+     * numpy.random.randint(start,end,size)
+     */
+    public static List<Integer> randint(int start,int end,int num) throws Exception {
+        return choice(start,end+1,true,num,new ArrayList<Double>());
+    }
+
+
+    /**
+     * @param start
+     * @param end
+     * @param replaceable
+     * @param num
+     * @param weights
+     * @return
+     * 重载将weights使用于
+     */
+    public static List<Integer> choiceWithIntegerWeight(int start,int end,boolean replaceable,int num,List<Integer> weights) throws Exception {
+        if (weights==null || weights.isEmpty()){
+            choice(start,end,replaceable,num,null);
+        }
+        int sum=0;
+        for (Integer item:weights){
+            sum+=item;
+        }
+        List<Double> doubleList=new ArrayList<>();
+        for (Integer item:weights){
+            double newItem=item/sum*1.0;
+            doubleList.add(newItem);
+        }
+        return choice(start,end,replaceable,num,doubleList);
+
+    }
+
+
     public static void main(String[] args) throws Exception {
         Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
-        List<Integer> list=Randoms.choice(1,6,false,2,Arrays.asList(doubles));
+        List<Integer> list=Randoms.choice(1,6,false,1,null);
         System.out.println(list);
        /* Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
         Arrays.asList(doubles);
