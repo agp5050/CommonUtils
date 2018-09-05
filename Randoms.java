@@ -1,4 +1,3 @@
-
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -80,7 +79,12 @@ public class Randoms {
             }
             rate+=weight;
         }
-        if (rate!=1){
+        if (weights==null&&weights.isEmpty()){
+            throw new Exception(String.format("collection weights must not be null or empty! ",collection.size(),num));
+
+        }
+        System.out.println("Math.abs(rate-1)::"+Math.abs(rate-1));
+        if (Math.abs(rate-1)>1E-5){
             throw new Exception("sum of weights  must be equal to 1.0 ");
         }
 
@@ -149,7 +153,7 @@ public class Randoms {
      * numpy.random.randint(start,end,size)
      */
     public static List<Integer> randint(int start,int end,int num) throws Exception {
-        return choice(start,end+1,true,num,new ArrayList<Double>());
+        return choice(start,end,true,num,new ArrayList<Double>());
     }
 
 
@@ -179,11 +183,53 @@ public class Randoms {
 
     }
 
+    /**
+     * @param collection
+     * @param replaceable
+     * @param num
+     * @param weights  适用于weights为Integer List的时候
+     * @param <T>
+     * @return
+     * @throws Exception
+     */
+    public static <T> Collection<T> choiceWithIntegerWeight(Collection<T> collection,boolean replaceable,int num,List<Integer> weights) throws Exception {
+        if (weights==null || weights.isEmpty()){
+            return randomChoice(collection,num,replaceable);
+        }
+        int sum=0;
+        for (Integer item:weights){
+            sum+=item;
+        }
+        List<Double> doubleList=new ArrayList<>();
+        for (Integer item:weights){
+            double newItem=item*1.0/sum;
+            doubleList.add(newItem);
+        }
+        return choice(collection,num,replaceable,doubleList);
+
+    }
+
+    /**
+     *public static <T> Collection<T> choice(Collection<T> collection,int num,boolean replaceable)
+     * 重载，从集合中随机取数的情况
+     */
+    public static <T> Collection<T> randomChoice(Collection<T> collection,int num,boolean replaceable) throws Exception {
+        if (collection==null||collection.isEmpty()){
+            throw new Exception("collection must not be null or empty");
+        }
+        int sum=collection.size();
+        List<Double> weights=new ArrayList<>();
+        for (T item:collection){
+            weights.add(1.0/sum);
+        }
+        return choice(collection,num,replaceable,weights);
+    }
 
     public static void main(String[] args) throws Exception {
         Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
-        List<Integer> list=Randoms.choice(1,6,false,1,null);
-        System.out.println(list);
+//        List<Integer> list=Randoms.choice(1,6,false,1,null);
+//        System.out.println(list);
+        Randoms.randomChoice(Arrays.asList(doubles),3,true);
        /* Double[] doubles=new Double[]{0.1,0.1,0.4,0.0,0.4};
         Arrays.asList(doubles);
 
