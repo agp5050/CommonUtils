@@ -1,46 +1,60 @@
 
-import org.ho.yaml.Yaml;
-import org.springframework.context.ConfigurableApplicationContext;
 
-import java.io.File;
+import com.jffox.cloud.config.Configs;
+import org.yaml.snakeyaml.Yaml;
+
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
-public class AutoUpdateConfigs<T> implements Runnable{
-    ConfigurableApplicationContext ctx=null;
-    T bean=null;
-    public AutoUpdateConfigs(){}
-    public AutoUpdateConfigs(ConfigurableApplicationContext ctx){
-        this.ctx=ctx;
+public class AutoUpdateConfigs<T>{
+    private T configs;
+    private String filePath;
+    public AutoUpdateConfigs(T configs,String path){
+        this.configs=configs;
+        this.filePath=path;
     }
 
-    @Override
-    public void run() {
-        T bean = (T)ctx.getBean(this.bean.getClass());
-        File dumpFile=new File(System.getProperty("user.dir") + "/conf/application-prod.yml");
+    public void updateBean() {
+        Yaml yaml=new Yaml();
         try {
-            HashMap<String,String> paras = Yaml.loadType(dumpFile, HashMap.class);
-            updateBean(bean,paras);
+            HashMap<String,Object> hashMap = yaml.loadAs(new FileReader(filePath), HashMap.class);
+            HashMap<String,Object> hashMapN=new HashMap<>();
+            //只支持1层目录，如果再加上一层循环可以支持多层目录yaml
+            for (Object object:hashMap.values()){
+                if (object.getClass()== LinkedHashMap.class){
+                    LinkedHashMap object1 = (LinkedHashMap) object;
+                    hashMapN.putAll(object1);
+                }
+            }
+            Field[] declaredFields = configs.getClass().getDeclaredFields();
+            for (Field field:declaredFields){
+                field.setAccessible(true);
+                Object newValue = hashMapN.get(field.getName());
+                field.set(configs,newValue+"");
+            }
+            System.out.println(configs+"-----new Bean");
+
         } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }catch (Exception e){
             e.printStackTrace();
         }
 
     }
 
-    private void updateBean(T bean, HashMap<String,String> paras) {
-        Field[] declaredFields = bean.getClass().getDeclaredFields();
-        for (Field field:declaredFields){
-            field.setAccessible(true);
-            String newValue = paras.get(field.getName());
-            if (newValue!=null){
-                try {
-                    field.set(bean,newValue);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
+    public static void main(String[] args) {
+        Configs configs = new Configs();
+        System.out.println(configs);
+        String path=System.getProperty("user.dir")+"\\src\\main\\resources\\application-prod.yml";
+        System.out.println(path);
+        AutoUpdateConfigs<Configs> autoUpdateConfigs=new AutoUpdateConfigs<>(configs,path);
+        autoUpdateConfigs.updateBean();
+        System.out.println(configs);
     }
 }
+
