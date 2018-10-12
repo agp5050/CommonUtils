@@ -33,7 +33,9 @@ public class AutoUpdateConfigs<T>{
             for (Field field:declaredFields){
                 field.setAccessible(true);
                 Object newValue = hashMapN.get(field.getName());
-                field.set(configs,newValue+"");
+                if(newValue!=null){
+                    field.set(configs,newValue+"");
+                }
             }
             System.out.println(configs+"-----new Bean");
 
