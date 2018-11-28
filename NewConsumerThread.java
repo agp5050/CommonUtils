@@ -1,3 +1,4 @@
+
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -32,7 +33,7 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
     public void close() throws IOException {
         flag=false;
         while (!msgQueue.isEmpty()){
-            log.info("msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}",msgQueue.size());
+            log.info("当前Thread name："+Thread.currentThread().getName()+" msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}",msgQueue.size());
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
@@ -89,10 +90,10 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
     private void checkMsgQueue(Queue<String> msgQueue) {
         if(msgQueue.size()<2000){
             minusInterval();
-            System.out.println("minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
-        }else if(msgQueue.size()>5000){
+            System.out.println("当前Thread name："+Thread.currentThread().getName()+" 正进行minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+        }else if(msgQueue.size()>6000){
             increaseInterval();
-            System.out.println("increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            System.out.println("当前Thread name："+Thread.currentThread().getName()+" increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
         }
     }
     //最大睡眠5s
