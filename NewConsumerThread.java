@@ -1,4 +1,5 @@
 
+
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -33,7 +34,7 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
     public void close() throws IOException {
         flag=false;
         while (!msgQueue.isEmpty()){
-            log.info("当前Thread name："+Thread.currentThread().getName()+" msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}",msgQueue.size());
+            log.info(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}",msgQueue.size());
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
@@ -83,27 +84,31 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            consumer.commitSync();
+//            consumer.commitSync();
         }
     }
 
     private void checkMsgQueue(Queue<String> msgQueue) {
-        if(msgQueue.size()<2000){
+        if(msgQueue.size()<1000){
+            if (msgQueue.size()==0){
+                this.consumer.commitSync();
+            }
             minusInterval();
-            System.out.println("当前Thread name："+Thread.currentThread().getName()+" 正进行minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
-        }else if(msgQueue.size()>6000){
+            System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" 正进行minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+        }else if(msgQueue.size()>4000){
             increaseInterval();
-            System.out.println("当前Thread name："+Thread.currentThread().getName()+" increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
         }
     }
-    //最大睡眠5s
+    //最大睡眠8s
     private void increaseInterval() {
-        long tmp=(long)(sleepTime*1.2);
-        sleepTime = tmp>5000 ? 5000: tmp;
+        long tmp=(long)(sleepTime*1.4);
+        sleepTime = tmp>8000 ? 8000: tmp;
     }
 
     private void minusInterval() {
-        sleepTime=(long)(sleepTime/1.2);
+        long tmp=(long)(sleepTime/1.3);
+        sleepTime =  tmp<20 ? 20 : tmp;
     }
 }
 
