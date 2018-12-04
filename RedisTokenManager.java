@@ -1,4 +1,4 @@
-package com.jiufu.outbound.authorization.manager.impl;
+
 
 import com.jiufu.outbound.authorization.config.Constants;
 import com.jiufu.outbound.authorization.manager.TokenManager;
