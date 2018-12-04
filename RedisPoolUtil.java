@@ -1,4 +1,3 @@
-package com.jffox.cloud.util;
 
 import redis.clients.jedis.Jedis;
 
