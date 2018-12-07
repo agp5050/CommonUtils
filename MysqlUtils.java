@@ -1,27 +1,33 @@
 
-
+import com.jffox.cloud.config.Configs;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.beans.PropertyVetoException;
 import java.io.IOException;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 @Component
+@ConfigurationProperties("spring.datasource")
 public class MysqlUtils {
+    private MysqlUtils(){}
+    private static MysqlUtils mysqlUtils;
     private static Logger LOG = LoggerFactory.getLogger(MysqlUtils.class);
     private  Datasource mysqlDataSource = null;
-    @Value("${spring.datasource.username}")
-    private String username;
-    @Value("${spring.datasource.password}")
-    private String password;
-    @Value("${spring.datasource.url}")
-    private String url;
-    {
+    @Autowired
+    public  Configs configs;
+
+    @PostConstruct
+    public void init(){
+        mysqlUtils=this;
+        mysqlUtils.configs=this.configs;
+        System.out.println(configs.getUrl());
         try {
             mysqlDataSource = new Datasource().getInstance();
         } catch (Exception e) {
@@ -84,7 +90,7 @@ public class MysqlUtils {
      * @param st
      * @param objs
      */
-    private static void setParams(PreparedStatement st, Object... objs) {
+    private void setParams(PreparedStatement st, Object... objs) {
         // 判断是否有参数
         if (objs == null || objs.length == 0) {
             return;
@@ -162,12 +168,13 @@ public class MysqlUtils {
 //            String url = ResourceUtil.getString("mysql.jdbc");
 //            String username = ResourceUtil.getString("mysql.username");
 //            String password = ResourceUtil.getString("mysql.password");
-            ds.setUrl(url);
-            ds.setUsername(username);
-            ds.setPassword(password);
+            ds.setUrl(configs.getUrl());
+            ds.setUsername(configs.getUsername());
+            ds.setPassword(configs.getPassword());
             //the settings below are optional -- dbcp can work with defaults
-            ds.setMinIdle(5);
-            ds.setMaxIdle(20);
+            ds.setMinIdle(1);
+            ds.setMaxIdle(3);
+            ds.setMaxActive(20);
             ds.setMaxOpenPreparedStatements(180);
         }
         public  Datasource getInstance() throws IOException, SQLException, PropertyVetoException {
