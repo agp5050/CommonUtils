@@ -1,5 +1,11 @@
 
+import com.alibaba.fastjson.JSON;
+import util.HttpClientUtils;
+import util.MysqlUtils;
+
 import javax.servlet.ServletException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -12,7 +18,8 @@ import java.util.*;
 public class DatabaseMetadataMornitor {
     Connection conn = null;
     Statement st = null;
-    Map<String, Map<String,String>> tableColumns=new HashMap<>();
+    public static Map<String, Map<String,String>> tableColumns=new HashMap<>();
+    public static final String tableStyle="<table border=\"1\" cellspacing=\"0\" ><div>";
     //获取conn
     public void init() throws ServletException {
         try {
@@ -32,6 +39,7 @@ public class DatabaseMetadataMornitor {
     public Map<String, Map<String,String>> doGet() {
         Map<String, Map<String,String>> tmpTableColumns=new HashMap<>();
         try {
+            this.conn=MysqlUtils.getConnection();
             DatabaseMetaData dbMetaData = conn.getMetaData();
             ResultSet rs = dbMetaData.getTables(null, null, null,new String[] { "TABLE" });
             while (rs.next()) {// ///TABLE_TYPE/REMARKS
@@ -56,7 +64,7 @@ public class DatabaseMetadataMornitor {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
+        System.out.println(JSON.toJSONString(tmpTableColumns));
         return tmpTableColumns;
 
     }
@@ -73,11 +81,12 @@ public class DatabaseMetadataMornitor {
 
         oldTables.removeAll(newTables);
         //是否删除了表
-        context.append("<table border=\"1\" cellspacing=\"0\" ><div>");
+        context.append(tableStyle);
         if (!oldTables.isEmpty()){
+            System.out.println("oldTables"+JSON.toJSONString(oldTables));
             context.append("<tr><th>距上次扫描被删除的表格</th></tr>");
             for (String item:oldTables){
-                context.append("<tr><td>");
+                context.append("<tr><td align=\"center\">");
                 context.append(item);
                 context.append("</td></tr>");
             }
@@ -85,9 +94,10 @@ public class DatabaseMetadataMornitor {
         //是否新建了表
        newTables.removeAll(lastMap.keySet());
         if (!newTables.isEmpty()){
+            System.out.println("newTables"+JSON.toJSONString(newTables));
             context.append("<tr><th>距上次扫描新增的表格</th></tr>");
             for (String item:newTables){
-                context.append("<tr><td>");
+                context.append("<tr><td align=\"center\">");
                 context.append(item);
                 context.append("</td></tr>");
             }
@@ -109,7 +119,7 @@ public class DatabaseMetadataMornitor {
 
 
 
-        return null;
+        return context.toString();
     }
 
     private void compareColumns(Map<String, String> oldColumnTypes, Map<String, String> newColumnTypes, StringBuffer context,String tableName) {
@@ -122,7 +132,7 @@ public class DatabaseMetadataMornitor {
         if (!keySetOld.isEmpty()){
             context.append("<tr><th>被删除的字段</th></tr>");
             for (String item:keySetOld){
-                context.append("<tr><td>");
+                context.append("<tr><td align=\"center\">");
                 context.append(item);
                 context.append("</td></tr>");
             }
@@ -133,7 +143,7 @@ public class DatabaseMetadataMornitor {
         if (!keySetNew.isEmpty()){
             context.append("<tr><th>新增的字段</th></tr>");
             for (String item:keySetNew){
-                context.append("<tr><td>");
+                context.append("<tr><td align=\"center\">");
                 context.append(item);
                 context.append("</td></tr>");
             }
@@ -154,13 +164,13 @@ public class DatabaseMetadataMornitor {
                 continue;
             else {
                 exists=true;
-                stringBufferTmp.append("<tr><td>");
+                stringBufferTmp.append("<tr><td align=\"center\">");
                 stringBufferTmp.append(item);
                 stringBufferTmp.append("</td>");
-                stringBufferTmp.append("<td>");
+                stringBufferTmp.append("<td align=\"center\">");
                 stringBufferTmp.append(oldType);
                 stringBufferTmp.append("</td>");
-                stringBufferTmp.append("<td>");
+                stringBufferTmp.append("<td align=\"center\">");
                 stringBufferTmp.append(newType);
                 stringBufferTmp.append("</td></tr>");
 
@@ -179,9 +189,28 @@ public class DatabaseMetadataMornitor {
     public static void main(String[] args) {
         try {
             DatabaseMetadataMornitor databaseMetadataMornitor = new DatabaseMetadataMornitor();
-            databaseMetadataMornitor.init();
-            databaseMetadataMornitor.doGet();
-        } catch (ServletException e) {
+            databaseMetadataMornitor.tableColumns=databaseMetadataMornitor.doGet();
+            while (true){
+                Thread.sleep(20000);
+                Map<String, Map<String, String>> stringMapMap = databaseMetadataMornitor.doGet();
+                String s = databaseMetadataMornitor.doCompare(databaseMetadataMornitor.tableColumns, stringMapMap);
+                if (!s.equals(tableStyle)){
+                    String to="aaaa@9abc.com.cn";
+                    String subject="Mysql监控";
+                    String url="http://127.0.0.1:9025/com/abc/ai/sendmail?to=%s&subject=%s&context=%s";
+                    String newS = URLEncoder.encode(s, "utf-8");
+                    String newUrl = String.format(url, to, subject, newS);
+                    System.out.println(newUrl);
+                    HttpClientUtils.doGet(newUrl);
+
+                }
+                System.out.println(s);
+                DatabaseMetadataMornitor.tableColumns=stringMapMap;
+
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
     }
