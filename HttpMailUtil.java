@@ -109,7 +109,7 @@ public class HtmlMailUtil {
             messageBodyPart = new MimeBodyPart();
             DataSource dataSource1=new ByteArrayDataSource(Base64.getDecoder().decode(fileBase64String), "application/octet-stream");
             messageBodyPart.setDataHandler(new DataHandler(dataSource1));
-            messageBodyPart.setFileName(MimeUtility.encodeText(filename,"gb2312","B"));
+            messageBodyPart.setFileName(MimeUtility.encodeText(filename,"gbk","B"));
             multipart.addBodyPart(messageBodyPart);
         }
 
