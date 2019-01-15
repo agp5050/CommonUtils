@@ -63,6 +63,64 @@ public class HtmlMailUtil {
 	private static JavaMailSenderImpl getJavaMailSender() {
 		return (JavaMailSenderImpl) SpringContextHolder.getBean("mailSender");
 	}
+	
+	// used for base64 string ... in some circumstances apis receive base64 string not binary file steam. then this method is propose。
+	 public static boolean sendHtmlMailWithBase64String(String to,String cc,String bcc, String subject, String context, String filename,String fileBase64String) throws Exception {
+
+        JavaMailSenderImpl mailSender = getJavaMailSender();
+        Properties props = new Properties();
+        props.setProperty("mail.transport.protocol", "smtp");
+        props.setProperty("mail.smtp.host", mailSender.getHost());
+        props.setProperty("mail.smtp.user", mailSender.getUsername());
+        props.setProperty("mail.smtp.password", mailSender.getPassword());
+        props.setProperty("mail.smtp.auth", "true");
+        props.setProperty("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        String port = String.valueOf(mailSender.getPort());
+        props.setProperty("mail.smtp.port", port);
+        props.setProperty("mail.smtp.socketFactory.port", port);
+        Session mailSession = Session.getDefaultInstance(props, new SimpleAuthenticator(mailSender.getUsername(), mailSender.getPassword()));
+        mailSession.setDebug(true);
+        Transport transport = mailSession.getTransport();
+
+        MimeMessage message = new MimeMessage(mailSession);
+        message.setSubject(subject,"utf-8");
+        message.setFrom(new InternetAddress(mailSender.getUsername()));
+        if (StringUtils.isNotEmpty(to)){
+            InternetAddress[] internetAddressTo = new InternetAddress().parse(to);
+            message.setRecipients(Message.RecipientType.TO,internetAddressTo);
+        }
+        if (StringUtils.isNotEmpty(cc)){
+            InternetAddress[] internetAddressCc = new InternetAddress().parse(cc);
+            message.setRecipients(Message.RecipientType.CC,internetAddressCc);
+        }
+        if (StringUtils.isNotEmpty(bcc)){
+            InternetAddress[] internetAddressBcc = new InternetAddress().parse(bcc);
+            message.setRecipients(Message.RecipientType.BCC,internetAddressBcc);
+        }
+
+
+        MimeMultipart multipart = new MimeMultipart("related");
+
+        BodyPart messageBodyPart = new MimeBodyPart();
+        messageBodyPart.setContent(context, "text/html;charset=utf-8");
+        multipart.addBodyPart(messageBodyPart);
+
+        if (filename!=null && fileBase64String!=null) {
+            messageBodyPart = new MimeBodyPart();
+            DataSource dataSource1=new ByteArrayDataSource(Base64.getDecoder().decode(fileBase64String), "application/octet-stream");
+            messageBodyPart.setDataHandler(new DataHandler(dataSource1));
+            messageBodyPart.setFileName(MimeUtility.encodeText(filename,"gb2312","B"));
+            multipart.addBodyPart(messageBodyPart);
+        }
+
+        message.setContent(multipart);
+
+        transport.connect();
+        transport.sendMessage(message,
+                message.getAllRecipients());
+        transport.close();
+        return true;
+    }
 
 }
 
