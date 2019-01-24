@@ -9,7 +9,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 
 /**
- * 异步线程池配置
+ * 异步线程池配置,主要用于异步spring项目的异步task。
  */
 @Component
 public class AsyncConfigurer implements org.springframework.scheduling.annotation.AsyncConfigurer {
