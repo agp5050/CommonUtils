@@ -6,9 +6,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -22,11 +23,13 @@ public class ExcelUtil {
     public static JSONObject createExcel(String dst,JSONObject jsonObject,String dataKey){
         //返回调用结果
         JSONObject result=new JSONObject();
+        OutputStream outputStream=null;
+        Workbook workbook=null;
         try{
             File file=new File(dst);
             file.createNewFile();
 //            OutputStream outputStream=new FileOutputStream(file);
-            Workbook workbook=new XSSFWorkbook();
+            workbook=new XSSFWorkbook();
             Sheet first_sheet = workbook.createSheet("First sheet");
             JSONArray jsonArray = jsonObject.getJSONArray(dataKey);
             JSONObject jsonObject1 = jsonArray.getJSONObject(0);
@@ -47,12 +50,30 @@ public class ExcelUtil {
                     cell.setCellValue(jsonObject2.get(key).toString());
                 }
             }
-            workbook.write(new FileOutputStream(file));
-            workbook.close();
+            outputStream=new FileOutputStream(file);
+            workbook.write(outputStream);
+
         }catch (Exception e){
             result.put("result","failed");
             result.put("reason",e.getMessage());
             return result;
+        }finally {
+          if (workbook!=null){
+              try {
+                  workbook.close();
+              } catch (IOException e) {
+                  e.printStackTrace();
+              }
+              workbook=null;
+          }
+          if (outputStream!=null){
+              try {
+                  outputStream.close();
+              } catch (IOException e) {
+                  e.printStackTrace();
+              }
+              outputStream=null;
+          }
         }
             result.put("result","success");
         return  result;
