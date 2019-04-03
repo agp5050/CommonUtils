@@ -249,3 +249,36 @@ public class LogUtils {
         classLoader = LogUtils.class.getClassLoader();
     }
 }
+
+@RestController
+@Api("日志级别设置")
+public class LogLevelController {
+ 
+	
+	@RequestMapping(method = {RequestMethod.GET},value="/setLevel")
+	@ApiOperation(value = "设置日志级别")
+    public void setLevel(@RequestParam String name,@RequestParam String level,HttpServletResponse response) {
+		 PrintWriter pw=null;
+		 try {
+			 pw = response.getWriter();
+			 LogUtils.setLogLevel(name, level);
+			  pw.println("set "+name+" level is:"+level);
+			  pw.close();
+		} catch (Exception e) {
+			  pw.println(e.getMessage());
+		}
+	}
+	
+	@RequestMapping(method = {RequestMethod.GET},value="/getLevel")
+	@ApiOperation(value = "获取日志级别")
+    public void getLevel(HttpServletResponse response) {
+		String con=LogUtils.getAllLogLevel().toString();
+		 PrintWriter pw;
+		 try {
+			  pw = response.getWriter();
+			  pw.println(con);
+			  pw.close();
+		} catch (Exception e) {
+		}
+	}
+	
