@@ -1,3 +1,4 @@
+package util;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -20,17 +21,12 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.poi.hssf.usermodel.HSSFCell;
-import org.apache.poi.hssf.usermodel.HSSFRichTextString;
-import org.apache.poi.hssf.usermodel.HSSFRow;
-import org.apache.poi.hssf.usermodel.HSSFSheet;
-//import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DateUtil;
-import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -47,7 +43,58 @@ import org.slf4j.LoggerFactory;
  * @created at 2016年11月10日 下午2:10:57
  */
 public class ExcelUtil {
+   public static class ExcelSheet<T> {
 
+        private String sheetName; // sheet的名字
+        private String[] headers; // sheet的表头
+        private Collection<T> dataset; // sheet的数据集
+
+        /**
+         * @return the sheetName
+         */
+        public String getSheetName() {
+            return sheetName;
+        }
+
+        /**
+         * @param sheetName
+         *            the sheetName to set
+         */
+        public void setSheetName(String sheetName) {
+            this.sheetName = sheetName;
+        }
+
+        /**
+         * @return the headers
+         */
+        public String[] getHeaders() {
+            return headers;
+        }
+
+        /**
+         * @param headers
+         *            the headers to set
+         */
+        public void setHeaders(String[] headers) {
+            this.headers = headers;
+        }
+
+        /**
+         * @return the dataset
+         */
+        public Collection<T> getDataset() {
+            return dataset;
+        }
+
+        /**
+         * @param dataset
+         *            the dataset to set
+         */
+        public void setDataset(Collection<T> dataset) {
+            this.dataset = dataset;
+        }
+
+    }
     private static Logger mLogger = LoggerFactory.getLogger(ExcelUtil.class);
 
     /**
@@ -99,7 +146,7 @@ public class ExcelUtil {
      * @throws IOException
      */
     public static List<List<Object>> readExcel(File file, int sheetIndex, int startRowIndex, int endRowIndex,
-            int startColumnIndex, int endColumnIndex) throws IOException {
+                                               int startColumnIndex, int endColumnIndex) throws IOException {
         List<List<Object>> list = new ArrayList<List<Object>>();
         Workbook wb = getWorkbook(file);
         if (wb != null) {
@@ -138,7 +185,7 @@ public class ExcelUtil {
      * @throws IOException
      */
     public static List<List<Object>> readExcel(File file, String sheetName, int startRowIndex, int endRowIndex,
-            int startColumnIndex, int endColumnIndex) throws IOException {
+                                               int startColumnIndex, int endColumnIndex) throws IOException {
         List<List<Object>> list = new ArrayList<List<Object>>();
         Workbook wb = getWorkbook(file);
         if (wb != null) {
@@ -221,7 +268,7 @@ public class ExcelUtil {
      * @throws IOException
      */
     public static List<List<Object>> readExcel(String filePath, int sheetIndex, int startRowIndex, int endRowIndex,
-            int startColumnIndex, int endColumnIndex) throws IOException {
+                                               int startColumnIndex, int endColumnIndex) throws IOException {
         File file = new File(filePath);
         return readExcel(file, sheetIndex, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex);
     }
@@ -250,7 +297,7 @@ public class ExcelUtil {
      * @throws IOException
      */
     public static List<List<Object>> readExcel(String filePath, String sheetName, int startRowIndex, int endRowIndex,
-            int startColumnIndex, int endColumnIndex) throws IOException {
+                                               int startColumnIndex, int endColumnIndex) throws IOException {
         File file = new File(filePath);
         return readExcel(file, sheetName, startRowIndex, endRowIndex, startColumnIndex, endColumnIndex);
     }
@@ -395,7 +442,7 @@ public class ExcelUtil {
      * @param wb
      * @param sheet
      * @return
-     * @throws IOException 
+     * @throws IOException
      */
     public static List<List<Object>> getSheetBodyData(Workbook wb, Sheet sheet) throws IOException {
         List<List<Object>> list = new ArrayList<List<Object>>();
@@ -419,10 +466,10 @@ public class ExcelUtil {
      * @param startColumnIndex	开始列索引值
      * @param endColumnIndex	结束列索引值
      * @return
-     * @throws IOException 
+     * @throws IOException
      */
     public static List<List<Object>> getSheetData(Workbook wb, Sheet sheet, int startRowIndex, int endRowIndex,
-            int startColumnIndex, int endColumnIndex) throws IOException {
+                                                  int startColumnIndex, int endColumnIndex) throws IOException {
         List<List<Object>> list = new ArrayList<List<Object>>();
         if (startRowIndex > endRowIndex || startColumnIndex > endColumnIndex) {
             return list;
@@ -496,7 +543,7 @@ public class ExcelUtil {
     /**
      * 获取行的数据
      * @param row
-     * @param rowData
+     * @param
      * @return
      */
     public static List<Object> getRowData(Workbook wb, Row row) {
@@ -545,32 +592,32 @@ public class ExcelUtil {
 
         int cellType = cell.getCellType();
         switch (cellType) {
-        case Cell.CELL_TYPE_BLANK:
-            // return "";
-            return null;
-        case Cell.CELL_TYPE_BOOLEAN:
-            return cell.getBooleanCellValue();
-        case Cell.CELL_TYPE_ERROR:
-            return cell.getErrorCellValue();
-        case Cell.CELL_TYPE_FORMULA:
-            return cell.getNumericCellValue();
-        case Cell.CELL_TYPE_NUMERIC:
-            if (DateUtil.isCellDateFormatted(cell)) {
-                return cell.getDateCellValue();
-            } else if ("@".equals(cell.getCellStyle().getDataFormatString())) {
-                String value = df.format(cell.getNumericCellValue());
-                if (StringUtils.isBlank(value)) {
-                    return null;
-                }
-                return value;
-            } else if ("General".equals(cell.getCellStyle().getDataFormatString())) {
-                String value = nf.format(cell.getNumericCellValue());
-                if (StringUtils.isBlank(value)) {
-                    return null;
-                }
-                return value;
-            } else {
+            case Cell.CELL_TYPE_BLANK:
+                // return "";
+                return null;
+            case Cell.CELL_TYPE_BOOLEAN:
+                return cell.getBooleanCellValue();
+            case Cell.CELL_TYPE_ERROR:
+                return cell.getErrorCellValue();
+            case Cell.CELL_TYPE_FORMULA:
                 return cell.getNumericCellValue();
+            case Cell.CELL_TYPE_NUMERIC:
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    return cell.getDateCellValue();
+                } else if ("@".equals(cell.getCellStyle().getDataFormatString())) {
+                    String value = df.format(cell.getNumericCellValue());
+                    if (StringUtils.isBlank(value)) {
+                        return null;
+                    }
+                    return value;
+                } else if ("General".equals(cell.getCellStyle().getDataFormatString())) {
+                    String value = nf.format(cell.getNumericCellValue());
+                    if (StringUtils.isBlank(value)) {
+                        return null;
+                    }
+                    return value;
+                } else {
+                    return cell.getNumericCellValue();
                 /*double doubleValue = cell.getNumericCellValue();
                 long longValue = (long) doubleValue;
                 if (doubleValue - longValue > 0) {
@@ -581,18 +628,18 @@ public class ExcelUtil {
                 /*DecimalFormat df = new DecimalFormat("#");
                 String value = df.format(cell.getNumericCellValue()).toString();
                 return value;*/
-            }
-        case Cell.CELL_TYPE_STRING:
-            String value = cell.getStringCellValue();
-            if (StringUtils.isBlank(value)) {
+                }
+            case Cell.CELL_TYPE_STRING:
+                String value = cell.getStringCellValue();
+                if (StringUtils.isBlank(value)) {
+                    return null;
+                } else {
+                    return value;
+                }
+                // return cell.getRichStringCellValue();
+            default:
+                // return "";
                 return null;
-            } else {
-                return value;
-            }
-            // return cell.getRichStringCellValue();
-        default:
-            // return "";
-            return null;
         }
     }
 
@@ -727,6 +774,7 @@ public class ExcelUtil {
      */
     public static <T> void exportExcel(List<ExcelSheet<T>> sheets, String filePath, String pattern) {
         if (CollectionUtils.isEmpty(sheets)) {
+            Sheet sheet;
             return;
         }
         try {
@@ -867,10 +915,10 @@ public class ExcelUtil {
                 }
             }
         }
-        // 设定自动宽度
-        for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
+//        // 设定自动宽度
+//        for (int i = 0; i < headers.length; i++) {
+//            sheet.autoSizeColumn(i);
+//        }
     }
 
     /**
@@ -991,65 +1039,20 @@ public class ExcelUtil {
 
             sheetsData.add(sheetData);
         }
-        String filePath = "d://out_" + System.currentTimeMillis() + ".xlsx";
+        String filePath = "out_" + System.currentTimeMillis() + ".xlsx";
         exportExcel(sheetsData, filePath);
         System.out.println("-----end-----");
         /*for (int i = 0; i < list.size(); i++) {
         	System.out.println(list.get(i));
         }*/
+        String path = "C:\\Users\\agp50\\Desktop\\模型引擎\\模型引擎-筋斗云推荐模型\\abc-bak.xlsx";
+        try {
+            List<List<Object>> sheet1 = ExcelUtil.readExcel(path, "Sheet1");
+            System.out.println(JSON.toJSONString(sheet1));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
 
-class ExcelSheet<T> {
-
-    private String sheetName; // sheet的名字
-    private String[] headers; // sheet的表头
-    private Collection<T> dataset; // sheet的数据集
-
-    /**
-     * @return the sheetName
-     */
-    public String getSheetName() {
-        return sheetName;
-    }
-
-    /**
-     * @param sheetName
-     *            the sheetName to set
-     */
-    public void setSheetName(String sheetName) {
-        this.sheetName = sheetName;
-    }
-
-    /**
-     * @return the headers
-     */
-    public String[] getHeaders() {
-        return headers;
-    }
-
-    /**
-     * @param headers
-     *            the headers to set
-     */
-    public void setHeaders(String[] headers) {
-        this.headers = headers;
-    }
-
-    /**
-     * @return the dataset
-     */
-    public Collection<T> getDataset() {
-        return dataset;
-    }
-
-    /**
-     * @param dataset
-     *            the dataset to set
-     */
-    public void setDataset(Collection<T> dataset) {
-        this.dataset = dataset;
-    }
-
-}
