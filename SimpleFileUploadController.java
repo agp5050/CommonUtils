@@ -1,6 +1,4 @@
-package com.jffox.cloud.controller;
 
-import com.jffox.cloud.model.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
