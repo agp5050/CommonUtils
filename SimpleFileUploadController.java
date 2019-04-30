@@ -1,4 +1,5 @@
 
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +17,7 @@ import java.util.Date;
 
 @Slf4j
 @RestController
-public class SimpleFileUploadController {
+public class FileUploadController {
     public static String fileDir=System.getProperty("user.dir")+ File.separator+"python"+File.separator;
     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
     @PostConstruct
@@ -63,7 +64,11 @@ public class SimpleFileUploadController {
         String absolutePath = fileupload.getAbsolutePath();
         int dotIndex = absolutePath.lastIndexOf(".");
         String newFileName=absolutePath.substring(0,dotIndex)+"_"+format+absolutePath.substring(dotIndex);
-        fileupload.renameTo(new File(newFileName));
+        File newFile = new File(newFileName);
+        if(newFile.exists()){
+            newFile.delete();
+        }
+        fileupload.renameTo(newFile);
     }
 
 }
