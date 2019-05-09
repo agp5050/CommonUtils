@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -28,13 +29,31 @@ public class ConfigMap {
     private static final String DEFAULT_KEY_VALUE="空或者其他";
     //as it's a readonly used map ,use hash map for performance;
     public static Map<String, Map<String,String>> filedValueReflectMap=new HashMap<>();
+    private static Map<String,Integer> vocabMap=new HashMap<>();
     static {
         //execute only once in lifetime.
         try {
             readExcelData2Map(filedValueReflectMap);
+            readTxtData2Map(vocabMap);
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void readTxtData2Map(Map<String, Integer> vocabMap) throws IOException {
+        String vocabName="vocab_dict.txt";
+        String txtPath=getResourcePath(vocabName);
+        List<String> list = Files.readAllLines(Paths.get(txtPath), Charset.forName("UTF-8"));
+        list.stream().forEach(e->{
+            String[] split = e.split(":");
+            if (split.length==2){
+                vocabMap.put(split[0],Integer.parseInt(split[1]));
+            }
+        });
+    }
+
+    private static String getTxtPath() {
+        return null;
     }
 
     //in case online update excels.
@@ -59,7 +78,8 @@ public class ConfigMap {
     private static void readExcelData2Map(Map<String, Map<String, String>> filedValueReflectMap) throws IOException {
         String path= null;
         try {
-            path = getExcelPath();
+            String defaultName="model_parameter_reflect.xlsx";
+            path = getResourcePath(defaultName);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -124,8 +144,8 @@ public class ConfigMap {
         }
     }
 
-    public static String getExcelPath() throws IOException {
-        String defaultName="model_parameter_reflect.xlsx";
+    public static String getResourcePath(String defaultName) throws IOException {
+
         String os = System.getenv("OS");
         if (os!=null && os.contains("Windows")){
             ClassPathResource pathResource=new ClassPathResource(defaultName);
