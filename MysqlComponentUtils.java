@@ -1,7 +1,7 @@
 
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,11 +11,11 @@ import java.util.*;
 
 @Slf4j
 @Component
-public class MysqlComponentUtils {
+public class MysqlUtils {
     private static List<String> metadata=null;
     @Autowired
     DataSource mysqlDataSource;
-    public static void cleanAfterBatchQuery(){
+    public static void cleanBeforeBatchQuery(){
         if (metadata!=null){
             metadata.clear();
             metadata=null;
@@ -65,6 +65,7 @@ public class MysqlComponentUtils {
      * @return
      */
     public  List<Map<String, Object>> executeSqls(String sql) {
+        cleanBeforeBatchQuery();
         Map<String,String> columnNameReflectMap=new HashMap<>();
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -80,6 +81,13 @@ public class MysqlComponentUtils {
 
             ResultSetMetaData rsmd = rs.getMetaData();
             int cloumCount = rsmd.getColumnCount();
+            if (metadata==null){
+                metadata=new ArrayList<>();
+                //最后一个column id 不要了，对方不解析
+                for (int i = 1; i <= cloumCount; i++) {
+                    metadata.add(reflectName(rsmd.getColumnName(i)));
+                }
+            }
             for (int j=1;j<=cloumCount;++j){
                 String columnName = rsmd.getColumnName(j);
                 String reflectMapValue=reflectName(columnName);
@@ -87,7 +95,7 @@ public class MysqlComponentUtils {
             }
 
             listMap=new ArrayList<>();
-            Map<String, Object> results = null;
+            Map<String, Object> results ;
             while (rs.next()) { // 判断结果集是否还有数据（数据是一条记录的方式取出）
                 results=new HashMap<>();
                 for (int i = 1; i <= cloumCount; i++) {
@@ -127,7 +135,7 @@ public class MysqlComponentUtils {
     }
 
 
-    public static List<String> getMetadata(){
+    public  List<String> getMetadata(){
         if (metadata==null)
             throw new RuntimeException("metadata is null , this method should be invoked after executeSqlGetValues(String)");
         return MysqlUtils.metadata;
@@ -138,6 +146,7 @@ public class MysqlComponentUtils {
      * @return 返回多条row记录
      */
     public  List<List<String>> executeSqlGetValues(String sql) {
+        cleanBeforeBatchQuery();
         Connection conn = null;
         PreparedStatement stmt = null;
         List<List<String>> results = null;
@@ -153,8 +162,8 @@ public class MysqlComponentUtils {
             if (metadata==null){
                 metadata=new ArrayList<>();
                 //最后一个column id 不要了，对方不解析
-                for (int i = 1; i < cloumCount; i++) {
-                    metadata.add(rsmd.getColumnName(i));
+                for (int i = 1; i <= cloumCount; i++) {
+                    metadata.add(reflectName(rsmd.getColumnName(i)));
                 }
             }
             results=new ArrayList<>();
@@ -265,6 +274,24 @@ public class MysqlComponentUtils {
             }
         }
         return result;
+    }
+
+    public boolean invokeCallProcedure(String sql) throws SQLException {
+        Connection connection = mysqlDataSource.getConnection();
+        CallableStatement callableStatement = connection.prepareCall(sql);
+        boolean execute = callableStatement.execute();
+        log.info("execute call status {}",execute);
+        ResultSetMetaData metaData = callableStatement.getMetaData();
+        if (metaData!=null){
+            int columnCount = metaData.getColumnCount();
+            for (int i=0;i<columnCount;i++){
+                String columnName = metaData.getColumnName(i);
+                Object value = callableStatement.getObject(i);
+                log.info("call procedure call result contains :column-name:{} column-value:{}",columnName,value.toString());
+            }
+
+        }
+        return execute;
     }
 
 
