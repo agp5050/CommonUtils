@@ -1,35 +1,27 @@
 
 
+import com.te.datalake.util.DateUtils;
+import com.te.datalake.util.ShutdownCallback;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.kafka.common.TopicPartition;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Queue;
-
-public class NewConsumerThread<K,V> extends Thread implements Closeable {
-    private static final Logger log = LoggerFactory
-            .getLogger(NewConsumerThread.class);
+@Slf4j
+public class NewConsumerThread<K,V> extends Thread implements Closeable{
     private  Consumer<K,V> consumer;
     private List<String> topics;
     private ConsumerCallBack consumerCallBack;
     private static boolean flag=true;
-    private boolean needPause=false;
     private Queue<String> msgQueue=null;
     private long sleepTime=300L;
-    public void setNeedPause(boolean needPause){
-        this.needPause=needPause;
-    }
-    public void setFlag(boolean flag){
-        this.flag=flag;
-    }
-    public static boolean getFlag(){
-        return flag;
-    }
     @Override
     public void close() throws IOException {
         flag=false;
@@ -44,22 +36,45 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
         consumer.commitSync();
         consumer.close();
     }
-    public NewConsumerThread(Consumer<K,V> consumer, List<String> topiclist,Queue<String> msgQueue){
+    public NewConsumerThread(Consumer<K,V> consumer, List<String> topiclist,Queue<String> msgQueue,ConsumerCallBack consumerCallBack){
         this.consumer=consumer;
         topics=topiclist;
         this.msgQueue=msgQueue;
-        ShutdownCallback.register(this);
-
-    }
-    public NewConsumerThread(Consumer<K,V> consumer, List<String> topiclist,ConsumerCallBack consumerCallBack){
-        this.consumer=consumer;
-        topics=topiclist;
         this.consumerCallBack=consumerCallBack;
         ShutdownCallback.register(this);
+        consumer.subscribe(topics);
+    }
+
+    public NewConsumerThread(Consumer<K,V> consumer,
+                             List<String> topiclist,
+                             Queue<String> msgQueue,
+                             ConsumerCallBack consumerCallBack,
+                             Boolean fromBeginning){
+        this.consumer=consumer;
+        topics=topiclist;
+        this.msgQueue=msgQueue;
+        this.consumerCallBack=consumerCallBack;
+        ShutdownCallback.register(this);
+        if (fromBeginning){
+            consumer.subscribe(topics,new ConsumerRebalanceListener(){
+                @Override
+                public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+
+                }
+
+                @Override
+                public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+                    consumer.seekToBeginning(partitions);
+                }
+            });
+        }else {
+            consumer.subscribe(topics);
+        }
 
     }
+
+
     public void run(){
-        consumer.subscribe(topics);
         while (flag){
             ConsumerRecords<K, V> poll = consumer.poll(200);
             checkMsgQueue(msgQueue);
@@ -67,17 +82,10 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
                 if (msgQueue==null){
                     consumerCallBack.consume(record);
                 }else {
-
                     msgQueue.add((String) record.value());
                 }
             }
-            if (needPause){
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+
             try {
                 //太快消费不完OutOfMemoryError: Java heap space
                 Thread.sleep(sleepTime);
@@ -89,15 +97,21 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
     }
 
     private void checkMsgQueue(Queue<String> msgQueue) {
+        long l = System.currentTimeMillis();
         if(msgQueue.size()<1000){
-            if (msgQueue.size()==0){
+            //直接==0，提交的太频繁，导致日志疯狂的涨几个小时好几G
+            if (msgQueue.size()==0 && l%1000==0){
                 this.consumer.commitSync();
             }
             minusInterval();
-            System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" 正进行minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            if (l%3==0){
+                System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" 正进行minusInterval  ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            }
         }else if(msgQueue.size()>4000){
             increaseInterval();
-            System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            if (l%3==0){
+                System.out.println(DateUtils.getCurrentTime()+" 当前Thread name："+Thread.currentThread().getName()+" 正进行increaseInterval ... msgQueue size is:"+msgQueue.size()+"  interval is "+sleepTime+" milliseconds");
+            }
         }
     }
     //最大睡眠8s
@@ -108,7 +122,7 @@ public class NewConsumerThread<K,V> extends Thread implements Closeable {
 
     private void minusInterval() {
         long tmp=(long)(sleepTime/1.3);
-        sleepTime =  tmp<20 ? 20 : tmp;
+        sleepTime =  tmp<20 ? 50 : tmp;
     }
 }
 
