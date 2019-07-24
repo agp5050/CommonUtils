@@ -155,4 +155,20 @@ public class ListUtils {
         }
         return destList;
     }
+    
+    public static <E,R> void splitList(List<E> list, Integer splitLength, Function<List<E>,R> function){
+        if (list==null || list.size()==0) return;
+        int size=list.size();
+        int roundTimes=size/splitLength;
+        int remains=size%splitLength;
+        int from=0,to=0;
+        for (int i=0;i<roundTimes;++i){
+            from=i*splitLength;
+            to=(i+1)*splitLength;
+            List<E> es = list.subList(from, to);
+            function.apply(es);
+        }
+        List<E> es = list.subList(to, to + remains);
+        function.apply(es);
+    }
 }
