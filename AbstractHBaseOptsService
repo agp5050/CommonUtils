@@ -1,0 +1,98 @@
+
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.util.Bytes;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 
+ */
+@Slf4j
+public abstract class AbstractHBaseOptsService {
+
+    public Map<String, String> get(String tableName, String rowKey, String family, List<String> qualifiers) throws IOException {
+        Map<String, String> rsMap = new HashMap<>();
+        try (Table table = getConnection().getTable(TableName.valueOf(tableName))) {
+            Get get = new Get(Bytes.toBytes(rowKey));
+            for (String qualifier :
+                    qualifiers) {
+                if (StringUtils.isNotEmpty(qualifier)) {
+                    get.addColumn(Bytes.toBytes(family), Bytes.toBytes(qualifier));
+                }
+            }
+            Result result = table.get(get);
+
+            for (Cell cell :
+                    result.rawCells()) {
+                rsMap.put(Bytes.toString(CellUtil.cloneQualifier(cell))
+                        , Bytes.toString(CellUtil.cloneValue(cell)));
+            }
+        } catch (Exception e) {
+            log.error("{}", e);
+            e.printStackTrace();
+        }
+        return rsMap;
+    }
+
+    public Map<String, Map<String, String>> scan(String tableName, String prefix, String family, List<String> columns) throws IOException {
+        Map<String, Map<String, String>> maps = new HashMap<>();
+        try (Table table = getConnection().getTable(TableName.valueOf(tableName))) {
+            Scan scan = new Scan();
+
+            if (columns != null && columns.size() > 0) {
+                for (String column : columns) {
+                    scan.addColumn(Bytes.toBytes(family), Bytes.toBytes(column));
+                }
+            } else {
+                scan.addFamily(Bytes.toBytes(family));
+            }
+            scan.setRowPrefixFilter(Bytes.toBytes(prefix));
+            try (ResultScanner resultScanner = table.getScanner(scan)) {
+                Result rs = resultScanner.next();
+                while(rs != null) {
+                    HashMap<String, String> map = new HashMap<>();
+                    String key = null;
+                    for (Cell cell : rs.rawCells()) {
+                        map.put(Bytes.toString(CellUtil.cloneQualifier(cell))
+                                , Bytes.toString(CellUtil.cloneValue(cell)));
+                        key = Bytes.toString(CellUtil.cloneRow(cell));
+                    }
+                    maps.put(key, map);
+                    rs = resultScanner.next();
+                }
+            }
+        }
+        return maps;
+    }
+
+    public void put(String tableName, String rowKey, String family, Map<String, String> values) throws IOException {
+        try (Table table = getConnection().getTable(TableName.valueOf(tableName))) {
+            Put put = new Put(Bytes.toBytes(rowKey));
+            for (Map.Entry<String, String> entry :
+                    values.entrySet()) {
+                if (entry != null && entry.getKey() != null && entry.getValue() != null) {
+                    put.addColumn(Bytes.toBytes(family), Bytes.toBytes(entry.getKey()), Bytes.toBytes(entry.getValue()));
+                }
+            }
+            table.put(put);
+        }
+    }
+
+    public void delete(String tableName, String rowKey) throws IOException {
+        try(Table table = getConnection().getTable(TableName.valueOf(tableName))) {
+            Delete delete = new Delete(Bytes.toBytes(rowKey));
+            table.delete(delete);
+        }
+    }
+
+    public abstract Connection getConnection();
+}
