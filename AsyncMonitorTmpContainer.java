@@ -1,18 +1,23 @@
 
 
+
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+
 @Slf4j
-public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
+public class AsyncMonitorTmpContainer<K,V> extends LRUCacheUtils<K,V> {
     private static final ReentrantLock lockPut =new ReentrantLock();
     private static final ReentrantLock lockRemove =new ReentrantLock();
-    private List<K> keyList=new ArrayList<>(2000);
-    private static final int IN_CASE_OF_MEMO_OVERFLOW_THRESHOLD=5000;
+
+
+    public AsyncMonitorTmpContainer(){
+    }
+    public AsyncMonitorTmpContainer(int capacity){
+        super(capacity);
+    }
 
     @Override
     public boolean containsKey(Object key) {
@@ -31,12 +36,6 @@ public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
         V put=null;
         try {
            put = super.put(key, value);
-            keyList.add(key);
-            if (keyList.size()>=IN_CASE_OF_MEMO_OVERFLOW_THRESHOLD){
-                K k = keyList.get(0);
-                log.warn("IN_CASE_OF_MEMO_OVERFLOW_THRESHOLD remove Oldest item :{}",k);
-                remove(k);
-            }
         }catch (Exception e){
         }finally {
             lockPut.unlock();
@@ -46,12 +45,11 @@ public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
 
     @Override
     public V remove(Object key) {
-        if (key==null) return null;
         lockRemove.lock();
+        if (key==null) return null;
         V remove=null;
         try {
             remove = super.remove(key);
-            keyList.remove(key);
         }catch (Exception e){
 
         }finally {
@@ -60,8 +58,10 @@ public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
         return remove;
     }
 
-    public  List<K> getList(){
-        return keyList;
+
+
+    public Set<K> getList(){
+        return this.keySet();
     }
 
     public static void main(String[] args) {
@@ -70,9 +70,9 @@ public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
         for (int i=0;i<100;++i){
             new Thread(){
                 public void run(){
-                    for (int j=0;j<100;j++){
-                        Integer key=random.nextInt(10);
-                        Integer v=random.nextInt(20);
+                    for (int j=0;j<10000;j++){
+                        Integer key=random.nextInt(5000);
+                        Integer v=random.nextInt(5000);
                         container.put(key,v);
                     }
                 }
@@ -80,9 +80,11 @@ public class AsyncMonitorTmpContainer<K,V> extends ConcurrentHashMap<K,V> {
 
             new Thread(){
                 public void run(){
-                    for (int j=0;j<50;j++){
-                        Integer key=random.nextInt(10);
+                    for (int j=0;j<5000;j++){
+                        Integer key=random.nextInt(5000);
                         container.remove(key);
+                        if (container.size()>500)
+                            System.out.println(container.size());
                     }
                 }
             }.start();
