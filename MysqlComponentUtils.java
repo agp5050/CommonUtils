@@ -1,8 +1,11 @@
 
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -13,6 +16,8 @@ import java.util.*;
 @Component
 public class MysqlUtils {
     private static List<String> metadata=null;
+    @Autowired
+    DataSourceProperties dataSourceProperties;
     @Autowired
     DataSource mysqlDataSource;
     public static void cleanBeforeBatchQuery(){
@@ -108,10 +113,22 @@ public class MysqlUtils {
         } catch (Exception e) {
             e.printStackTrace();
             log.error("Executing sql {} error", sql, e);
+            HikariConfig hikariConfig=new HikariConfig();
+            hikariConfig.setJdbcUrl(dataSourceProperties.getUrl());
+            hikariConfig.setUsername(dataSourceProperties.getUsername());
+            hikariConfig.setPassword(dataSourceProperties.getPassword());
+            hikariConfig.setDriverClassName(dataSourceProperties.getDriverClassName());
+            mysqlDataSource = new HikariDataSource(hikariConfig);
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            executeSqls(sql);
         } finally {
+            close(rs);
             close(stmt);
             close(conn);
-            close(rs);
         }
         return listMap;
     }
@@ -199,8 +216,9 @@ public class MysqlUtils {
                 closeable.close();
             } catch (Exception e) {
                 e.printStackTrace();
+            }finally {
+                closeable=null;
             }
-            closeable=null;
         }
     }
 
