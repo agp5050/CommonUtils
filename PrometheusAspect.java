@@ -274,3 +274,10 @@ public @interface Prometheus {
   //double[] buckets() default {0.1, 0.4, 0.8, 1.1, 1.5};
 }
 
+
+
+/*
+*use 
+*	@Prometheus(name = "receiveExDataCtl", types = { MonitorType.LATENCY_HIS })
+* public Result test(){}
+*/
