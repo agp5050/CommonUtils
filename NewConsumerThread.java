@@ -1,13 +1,11 @@
-package com.te.datalake.thread;
+
 
 import com.te.datalake.util.DateUtils;
 import com.te.datalake.util.ShutdownCallback;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.Consumer;
-import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 
 import java.io.Closeable;
@@ -31,6 +29,7 @@ public class NewConsumerThread<K, V> extends Thread implements Closeable {
     private boolean flag = true;
     private Queue<String> msgQueue;
     private long sleepTime = 300L;
+    private boolean backPressureSwitch=true;
 
     @Override
     public void close()  {
@@ -51,7 +50,7 @@ public class NewConsumerThread<K, V> extends Thread implements Closeable {
             }
         }
         try{
-            consumer.commitAsync();
+            consumer.commitSync();
         }catch (Exception e){
             e.printStackTrace();
             log.error(e.getMessage());
@@ -105,24 +104,11 @@ public class NewConsumerThread<K, V> extends Thread implements Closeable {
 
 
     public void run() {
-        final String topic = this.topics.get(0);
         while (flag) {
-            ConsumerRecords<K, V> poll;
-            try{
-                poll = consumer.poll(200);
-            }catch (Exception e){
-                continue;
-            }
             checkMsgQueue(msgQueue);
-            for (ConsumerRecord record : poll) {
-                if (consumerCallBack != null) {
-                    consumerCallBack.consume(topic + DOUBLE_AND + record.value());
-                    totalConsumedMsg++;
-                } else {
-                    msgQueue.add(topic + DOUBLE_AND + record.value());
-                }
+            if (backPressureSwitch){
+                pullOnce();
             }
-
             try {
                 //太快消费不完OutOfMemoryError: Java heap space
                 Thread.sleep(sleepTime);
@@ -136,22 +122,45 @@ public class NewConsumerThread<K, V> extends Thread implements Closeable {
         }
     }
 
+    private void pullOnce() {
+        ConsumerRecords<K, V> poll;
+        try{
+            poll = consumer.poll(200);
+        }catch (Exception e){
+            return;
+        }
+        for (ConsumerRecord record : poll) {
+            if (consumerCallBack != null) {
+                consumerCallBack.consume(record.value());
+                totalConsumedMsg++;
+            } else {
+                msgQueue.add(record.value().toString());
+            }
+        }
+    }
+
     private void checkMsgQueue(Queue<String> msgQueue) {
         long l = System.currentTimeMillis();
-        if (msgQueue.size() < 200) {
+        int size = msgQueue.size();
+        if ( size< 200) {
             //直接==0，提交的太频繁，导致日志疯狂的涨几个小时好几G
             if (msgQueue.size() == 0 && l % 100 == 0) {
                 this.consumer.commitSync();
             }
             minusInterval();
+            if (backPressureSwitch==false){
+                backPressureSwitch=true;
+            }
 //            if (l % 3 == 0) {
 //                System.out.println(DateUtils.getCurrentTime() + " 当前Thread name：" + Thread.currentThread().getName() + " 正进行minusInterval  ... msgQueue size is:" + msgQueue.size() + "  interval is " + sleepTime + " milliseconds");
 //            }
-        } else if (msgQueue.size() > 4000) {
+        } else if (size > 4000 && size<40000) {
             increaseInterval();
             if (l % 3 == 0) {
                 System.out.println(DateUtils.getCurrentTime() + " 当前Thread name：" + Thread.currentThread().getName() + " 正进行increaseInterval ... msgQueue size is:" + msgQueue.size() + "  interval is " + sleepTime + " milliseconds");
             }
+        }else if (size > 40000){
+            backPressureSwitch=false;
         }
     }
 
