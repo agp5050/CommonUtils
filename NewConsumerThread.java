@@ -1,4 +1,4 @@
-
+package com.te.datalake.thread;
 
 import com.te.datalake.util.DateUtils;
 import com.te.datalake.util.ShutdownCallback;
@@ -42,7 +42,7 @@ public class NewConsumerThread<K, V> extends Thread implements Closeable {
             log.error(e.getMessage());
         }
         while (!msgQueue.isEmpty()) {
-            log.info(DateUtils.getCurrentTime() + " 当前Thread name：" + Thread.currentThread().getName() + " msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}", msgQueue.size());
+            log.info("当前Thread name：{}, msgQueue is not Empty waiting for msgQueue consume, remaining numbers {}" , Thread.currentThread().getName(), msgQueue.size());
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
