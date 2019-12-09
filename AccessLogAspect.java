@@ -1,7 +1,7 @@
 /*
 
  */
-package com.jffox.cloud.search.core.aop;/*
+package com.agp.cloud.search.core.aop;/*
 
  */
 package com.agp.cloud.search.core.aop;
@@ -274,269 +274,112 @@ public class AccessLogAspect {
 }
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jffox.cloud.search.feign.clients.DataxRealTimeFeign;
-import com.jffox.cloud.search.feign.clients.SearchRedisFeign;
-import com.jffox.cloud.search.support.base.model.RequestConditions;
-import com.jffox.cloud.search.support.base.model.Result;
-import com.jffox.cloud.search.support.base.model.SearchParams;
-import com.jffox.cloud.search.support.dto.LogInfo;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.Signature;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
-import org.aspectj.lang.annotation.Pointcut;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+@Data
+class LogInfo {
 
-import javax.servlet.http.HttpServletRequest;
-import java.net.InetAddress;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+    /**
+     * 主键ID.
+     */
+    private Long id;
 
-import static com.jffox.cloud.search.support.Constants.DEFAULT_REDIS_TEMPLATE_KEY;
-import static com.jffox.cloud.search.support.Constants.REDIS_PREFIX_EXCEPTION_LOG;
+    /**
+     * 调用客户端ID.
+     */
+    private String appId;
 
-/**
- * 访问记录 切面.
- * 
- * @author L.Yang
- * @version v1.0 2017年4月11日 下午1:43:48
- */
-@Slf4j
-@Aspect
-@Component
-public class AccessLogAspect {
+    /**
+     * 请求ID.
+     */
+    private String requestId;
 
-	private ThreadLocal<LogInfo> accessLog = new ThreadLocal<>();
+    /**
+     * 调用开始毫秒数.
+     */
+    private Long startTime;
 
-	private ThreadLocal<RequestConditions> requestCondition = new ThreadLocal<>();
+    /**
+     * 调用IP.
+     */
+    private String callIp;
 
-	private static final String[] INCLUSIONS = {"ApiController.queryData"};
+    /**
+     * 搜索服务IP.
+     */
+    private String serverIp;
 
-	private ObjectMapper objectMapper;
+    /**
+     * 调用接口URL.
+     */
+    private String callUrl;
 
-	@Value("${app.to-kafka.url}")
-	private String toKafkaUrl;
+    /**
+     * 请求订单号.
+     */
+    private String code;
 
-	@Value("${app.to-kafka.topic}")
-	private String toKafkaTopic;
+    /**
+     * 爬虫流水号.
+     */
+    private String transNo;
 
-	@Value("${app.to-kafka.log-topic}")
-	private String toKafkaLogTopic;
+    /**
+     * 手机号.
+     */
+    private String mobile;
 
-	private RestTemplate restTemplate;
+    /**
+     * 万卡客户ID.
+     */
+    private String customerId;
 
-	private SearchRedisFeign searchRedisFeign;
+    /**
+     * 身份证号.
+     */
+    private String idCard;
 
-	private DataxRealTimeFeign dataxRealTimeFeign;
+    /**
+     * 入参json.
+     */
+    private String params;
 
-	@Pointcut("execution(public * com.jffox.cloud.search.core.controller..*.*(..))")
-	public void accessLog() {
-	}
+    /**
+     * 底层数据查询时间, ms.
+     */
+    private Integer dataSearchDuration;
 
-	/**
-	 * 执行前操作.
-	 * 
-	 * @param joinPoint
-	 *            切点对象
-	 * @throws Throwable
-	 *             方法异常
-	 */
-	@Before("accessLog()")
-	public void doBefore(JoinPoint joinPoint) throws Throwable {
-		String access = getClassMethod(joinPoint.getSignature());
-		if (isNeedLog(access)) {
-			LogInfo call = new LogInfo();
-			call.setStartTime(System.currentTimeMillis());
-            call.setTimeIndex(currentTimeIndex());
-			HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
-					.getRequestAttributes()).getRequest();
-			call.setCallIp(request.getRemoteAddr());
-			InetAddress address = InetAddress.getLocalHost();
-			String uri = request.getScheme() + "://" + address.getHostAddress() + ":" + request.getServerPort();
-			call.setServerIp(uri);
-			call.setCallUrl(request.getServletPath());
-			accessLog.set(call);
-		}
-	}
+    /**
+     * 调用耗时，ms.
+     */
+    private Integer duration;
 
-	/**
-	 * 处理请求入参.
-	 *
-	 * @param access  切点
-	 * @param args  入参数组
-	 * @param call  日志对象
-	 * @throws JsonProcessingException
-	 */
-	private void handleInParams(String access, Object[] args, LogInfo call) throws Exception {
-		if (args[0] instanceof RequestConditions) {
-			RequestConditions conditions = (RequestConditions) args[0];
-			requestCondition.set(conditions);
-			call.setRequestId(conditions.getRequestId());
-			call.setAppId(conditions.getAppId());
-			call.setCode(conditions.getSources().get(0).getCode());
-		}
-		call.setParams(objectMapper.writeValueAsString(args[0]));
-	}
+    /**
+     * 是否查询到数据，0-未查询到，1-查询到.
+     */
+    private Byte hasResult;
 
-	/**
-	 * 执行完成后操作.
-	 * 
-	 * @param ret
-	 *            操作结果
-	 * @throws Throwable
-	 *             方法异常
-	 */
-	@AfterReturning(returning = "ret", pointcut = "accessLog()")
-	public void doAfterReturning(JoinPoint point, Object ret) throws Throwable {
-		String access = getClassMethod(point.getSignature());
-		if (isNeedLog(access)) {
-			LogInfo call = accessLog.get();
-			long duration = System.currentTimeMillis() - call.getStartTime();
-			call.setDuration((int) duration);
-			new Thread(() -> {
-				try {
-					handleInParams(access, point.getArgs(), call);
-					String requestId = call.getRequestId();
-					log.info("请求ID：{}", requestId);
-					String redisKey = REDIS_PREFIX_EXCEPTION_LOG + requestId;
-					List<String> exceptionInfos = searchRedisFeign.listAll(DEFAULT_REDIS_TEMPLATE_KEY, redisKey);
-					searchRedisFeign.delete(DEFAULT_REDIS_TEMPLATE_KEY, redisKey);
-					if (CollectionUtils.isNotEmpty(exceptionInfos)) {
-						call.setIsException((byte)1);
-						call.setExceptionInfo(StringUtils.join(exceptionInfos, "\r\n"));
-					}
-					if (ret != null) {
-						Result result = (Result)ret;
-						try {
-							if (!result.isSuccess() || result.getData() == null ||
-									isEmptyData((Map<String, List<Map<String, String>>>) result.getData())) {
-								call.setHasResult((byte)0);
-							}
-						} catch (Exception e) {
-							log.error("{}", e);
-							log.error("请求返回的结果：{}", ret.toString());
-							call.setHasResult((byte)1);
-						}
-					} else {
-						call.setHasResult((byte)0);
-					}
-					Map<String, Object> msg = new HashMap<>();
-					RequestConditions condition = requestCondition.get();
-					msg.put("request", condition);
-					msg.put("response", ret);
-					msg.put("apiKey", "765");
-					msg.put("timestamp", System.currentTimeMillis());
-					msg.put("transNo", condition.getRequestId());
-					SearchParams params = condition.getSources().get(0);
-					msg.putAll(params.getParams());
-					sendMsgToKafka(toKafkaLogTopic, msg);
-					dataxRealTimeFeign.addLog(call);
-				} catch (Exception e) {
-					log.error("{}", e);
-				} finally {
-					requestCondition.remove();
-				}
-			}).start();
-			accessLog.remove();
-		}
-	}
+    /**
+     * 是否异常调用，0-正常调用，1-异常调用.
+     */
+    private Byte isException;
 
-	/**
-	 * 往Kafka发送消息.
-	 *
-	 * @param topic
-	 * @param message
-	 */
-	private void sendMsgToKafka(String topic, Object message) {
-		Map<String, Object> data = new HashMap<>();
-		data.put("topic", topic);
-		data.put("msg", message);
-		restTemplate.postForObject(toKafkaUrl, data, Map.class);
-	}
+    /**
+     * 异常信息.
+     */
+    private String exceptionInfo;
 
-	/**
-	 * 判断是否真正返回数据.
-	 *
-	 * @param data
-	 * @return
-	 */
-	private boolean isEmptyData(Map<String, List<Map<String, String>>> data) {
-		if (MapUtils.isEmpty(data)) {
-			return true;
-		}
-		for (Map.Entry<String, List<Map<String, String>>> detail : data.entrySet()) {
-			List<Map<String, String>> detailData = detail.getValue();
-			if (CollectionUtils.isNotEmpty(detailData) && MapUtils.isNotEmpty(detailData.get(0))) {
-				return false;
-			}
-		}
-		return true;
-	}
+    /**
+     * 96点时刻索引.
+     */
+    private Integer timeIndex;
 
-	/**
-	 * 获取方法调用名称.
-	 * 
-	 * @param signature
-	 *            Represents the signature at a join point.
-	 * @return 调用方法名称
-	 */
-	private String getClassMethod(Signature signature) {
-		return signature.getDeclaringTypeName() + "." + signature.getName();
-	}
+    /**
+     * 创建时间.
+     */
+    private Date createTime;
 
-	/**
-	 * 是否需进行日志输出.
-	 *
-	 * <pre>
-	 * 	如果在排除列表则进行输出。
-	 * </pre>
-	 *
-	 * @param access
-	 *            访问控制器名称
-	 * @return 是否排除
-	 */
-	private boolean isNeedLog(String access) {
-		boolean isInclude = false;
-		for (String exclusion : INCLUSIONS) {
-			isInclude = access.contains(exclusion);
-			if (isInclude)
-				break;
-		}
-		return isInclude;
-	}
+    /**
+     * 更新时间.
+     */
+    private Date updateTime;
 
-	/**
-	 * 获取当前时间在96点时刻中的索引.
-	 *
-	 * @return
-	 */
-	private int currentTimeIndex() {
-		Calendar now = Calendar.getInstance();
-		int hour = now.get(Calendar.HOUR_OF_DAY);
-		int minutes = now.get(Calendar.MINUTE);
-        return hour * 4 + Math.floorDiv(minutes, 15) + 1;
-	}
-
-	@Autowired
-	public AccessLogAspect(ObjectMapper objectMapper, RestTemplate restTemplate,
-						   SearchRedisFeign searchRedisFeign, DataxRealTimeFeign dataxRealTimeFeign) {
-		this.objectMapper = objectMapper;
-		this.restTemplate = restTemplate;
-		this.searchRedisFeign = searchRedisFeign;
-		this.dataxRealTimeFeign = dataxRealTimeFeign;
-	}
 }
