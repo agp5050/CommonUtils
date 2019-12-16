@@ -130,7 +130,7 @@ public class ListUtils {
         return result;
     }
 
-    /**
+     /**
      * 复制列表.
      *
      * @param descClassType 复制目标类型
@@ -143,17 +143,43 @@ public class ListUtils {
         if (CollectionUtils.isEmpty(srcList)) {
             return Collections.emptyList();
         }
+        Class<?> componetClass = srcList.get(0).getClass();
+
         List<D> destList = new ArrayList<>();
         try {
+            boolean isPrimitives = isPrimitives(componetClass, descClassType);
             for (S srcData : srcList) {
-                D destData = descClassType.newInstance();
-                BeanUtils.copyProperties(destData, srcData);
-                destList.add(destData);
+                if (!isPrimitives){
+                    D destData = descClassType.newInstance();
+                    BeanUtils.copyProperties(destData, srcData);
+                    destList.add(destData);
+                }else {
+                    if (componetClass ==descClassType){
+                        destList.add((D) srcData);
+                    }else {
+                        throw new RuntimeException("class TYPE is primitives");
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return destList;
+    }
+
+    private static <D> boolean isPrimitives(Class<D> descClassType, Class<?> componetClass) {
+        return componetClass.isPrimitive()
+                || componetClass == Short.class
+                || componetClass == Integer.class
+                || componetClass == Long.class
+                || componetClass == Float.class
+                || componetClass == Double.class
+                || componetClass == Boolean.class
+                || componetClass == String.class
+                || componetClass == Byte.class
+                || componetClass == Character.class
+                || componetClass.isEnum();
+
     }
     
     public static <E,R> void splitList(List<E> list, Integer splitLength, Function<List<E>,R> function){
