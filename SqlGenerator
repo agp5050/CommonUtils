@@ -1,8 +1,9 @@
+package com.agp.cloud.model_engine_ui_backend.util;
 
-
-import com.te.datalake.entity.remedy.RemedyModelInput;
+import com.agp.cloud.model_engine_ui_backend.entity.LogInfo;
+import com.agp.cloud.model_engine_ui_backend.entity.ModelItemEntity;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,13 +20,14 @@ public class SqlGenerator {
     static {
         property2SqlColumnMap.put("integer", "INT");
         property2SqlColumnMap.put("short", "tinyint");
+        property2SqlColumnMap.put("byte", "tinyint");
         property2SqlColumnMap.put("long", "bigint");
-        property2SqlColumnMap.put("bigdecimal", "decimal(19,2)");
-        property2SqlColumnMap.put("double", "double precision not null");
+        property2SqlColumnMap.put("bigdecimal", "decimal(12,2)");
+        property2SqlColumnMap.put("double", "double");
         property2SqlColumnMap.put("float", "float");
         property2SqlColumnMap.put("boolean", "bit");
-        property2SqlColumnMap.put("timestamp", "datetime");
-        property2SqlColumnMap.put("date", "datetime");
+        property2SqlColumnMap.put("timestamp", "timestamp default CURRENT_TIMESTAMP not null comment '创建时间'");
+        property2SqlColumnMap.put("date", "timestamp default CURRENT_TIMESTAMP null on update CURRENT_TIMESTAMP comment '修改时间'");
         property2SqlColumnMap.put("string", "VARCHAR(100)");
     }
 
@@ -66,6 +68,7 @@ public class SqlGenerator {
 
     private static String getColumnSql(Field field){
         String tpl = "\n `%s` %s DEFAULT NULL,";
+        String tplTime = "\n `%s` %s ,";
         String typeName = field.getType().getSimpleName().toLowerCase();
         String sqlType = property2SqlColumnMap.get(typeName);
         if (sqlType == null || sqlType.isEmpty()){
@@ -73,7 +76,13 @@ public class SqlGenerator {
             return "";
         }
         String column =camelToUnderline(field.getName());
-        String sql = String.format(tpl,column,sqlType.toUpperCase());
+        String sql;
+        if (column.contains("time")||column.contains("date")){
+            sql= String.format(tplTime,column,sqlType.toUpperCase());
+        }else {
+            sql= String.format(tpl,column,sqlType.toUpperCase());
+        }
+
         return sql;
     }
     private static void StringToSql(String str,String path){
@@ -115,10 +124,10 @@ public class SqlGenerator {
     }
 
     public static void main(String[] args) {
-        System.out.println(RemedyModelInput.class.getName());
-        System.out.println(RemedyModelInput.class.getTypeName());
-        System.out.println(RemedyModelInput.class.getSimpleName());
-        System.out.println(generateDefaultTableSql(RemedyModelInput.class,"id","RemedyModelInput.sql"));
+        System.out.println(ModelItemEntity.class.getName());
+        System.out.println(ModelItemEntity.class.getTypeName());
+        System.out.println(ModelItemEntity.class.getSimpleName());
+        System.out.println(generateDefaultTableSql(LogInfo.class,"id","LogInfo.sql"));
     }
 }
 
